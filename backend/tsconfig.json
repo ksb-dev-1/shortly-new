@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    /* File Layout */
+    "rootDir": "./src", // Tells TS to only look for source code inside /src
+    "outDir": "./dist", // Tells tsc where to put compiled JS files
+
+    /* Environment Settings */
+    "module": "nodenext", // Required for modern Node.js ESM (import/export)
+    "target": "esnext", // Compiles to modern JS features
+    "types": ["node"], // Explicitly enables Node.js global types
+
+    /* Source Maps & Declarations */
+    "sourceMap": true, // Helps you debug TS code in production if needed
+    "declaration": true, // Generates .d.ts files for type safety
+    "declarationMap": true,
+
+    /* Stricter Typechecking Options */
+    "strict": true, // Enables all strict type-checking rules
+    "noUncheckedIndexedAccess": true, // Objects/Arrays return 'undefined' if key doesn't exist
+    "exactOptionalPropertyTypes": true, // Prevents assigning 'undefined' to optional fields
+
+    /* Recommended Options */
+    "verbatimModuleSyntax": true, // Keeps imports clean and optimizes for tools like tsup/tsx
+    "isolatedModules": true, // Ensures safety when using esbuild/tsx under the hood
+    "skipLibCheck": true, // Skips type-checking node_modules (massive speed boost)
+    "moduleDetection": "force",
+
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"], // Tells TS to only care about files in the src folder
+  "exclude": ["node_modules", "dist"]
+}

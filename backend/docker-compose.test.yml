@@ -1,0 +1,31 @@
+# A throwaway Postgres for the test suite. Nothing else uses it, and no data in
+# it is meant to survive — the tests wipe the tables between runs.
+#
+#   npm run test:db:up     start it
+#   npm run test:db:down   stop and delete it
+services:
+  test-db:
+    image: postgres:17-alpine
+    container_name: shortly-test-db
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shortly_test
+
+    # Port 5433 on this machine, not the usual 5432. If you ever install
+    # Postgres natively it will take 5432, and the two would collide.
+    ports:
+      - "5433:5432"
+
+    # No volume on purpose. Without one the data lives and dies with the
+    # container, which is exactly what a test database should do.
+
+    # Postgres accepts connections a moment after the container starts. This
+    # tells Docker how to check it is genuinely ready, so `up --wait` can hold
+    # until the database will actually answer.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shortly_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

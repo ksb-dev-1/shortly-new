@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# tsc output
+dist/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Secrets. .env holds live Neon, Resend and Cloudinary credentials.
+.env
+.env.*
+
+# ...but these two are meant to be committed:
+#   .env.example  documents every variable, so a clone can be started at all
+#   .env.test     holds no real credentials, and without it the test suite
+#                 cannot run (process.loadEnvFile throws on a missing file)
+!.env.example
+!.env.test
+
+# Logs
+*.log
+npm-debug.log*
