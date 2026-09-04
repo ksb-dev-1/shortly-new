@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch --env-file=.env src/server.ts",
     "start": "node --env-file=.env dist/server.js",
     "migrate": "tsx --env-file=.env src/db/migrate.ts",

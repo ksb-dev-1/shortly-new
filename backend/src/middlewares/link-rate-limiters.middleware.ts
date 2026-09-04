@@ -42,12 +42,15 @@ export const createLinkLimiter = rateLimit({
  *
  * skipSuccessfulRequests is the whole reason this is safe to put on the hot
  * path. A 302 is under 400, so a resolved link never counts and a real visitor
- * is never throttled however many links they follow. Only misses accumulate,
+ * following links all day never builds a tally at all. Only misses accumulate,
  * and a long run of misses is exactly what scanning looks like.
  *
- * Keyed on IP, since there is no account here. That means a scanner can spend
- * the budget for everyone behind the same address, but only for codes that do
- * not exist -- working links keep working for them throughout.
+ * What that does NOT mean is that working links are exempt. The tally governs
+ * what accumulates, not what is let through: this middleware runs before the
+ * route, so once an address is at the limit every request from it is refused,
+ * a valid code included. Keyed on IP, since there is no account here, so a
+ * scanner behind a shared address does take everyone else down with it once
+ * the limit is reached. Asserted in rate-limits.test.ts.
  */
 export const redirectLimiter = rateLimit({
   windowMs: 15 * MINUTE,

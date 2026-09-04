@@ -1,0 +1,19 @@
+{
+  // What `npm run build` compiles: everything the base config covers, minus the
+  // tests.
+  //
+  // src/test sits under src, so a plain `tsc` emitted it into dist/ next to the
+  // application — the test files, their source maps and their .d.ts, all
+  // shipped to production. Harmless at runtime, since nothing imports them, but
+  // it puts Supertest-driven files in a deployed artifact and reads as an
+  // oversight to anyone who looks.
+  //
+  // Typechecking is unaffected: `tsc --noEmit` and the editor both read
+  // tsconfig.json, which still includes the tests. This config exists only to
+  // decide what gets emitted.
+  "extends": "./tsconfig.json",
+
+  // exclude replaces rather than extends the base list, so the two entries
+  // there have to be repeated.
+  "exclude": ["node_modules", "dist", "src/test"]
+}

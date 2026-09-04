@@ -51,16 +51,86 @@ address that owns the Resend account, which is fine when you're the only user.
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | Watch mode on `src/app.ts` |
-| `npm run build` | `tsc` to `dist/` |
+| `npm run dev` | Watch mode on `src/server.ts` |
+| `npm run build` | `tsc` to `dist/`, via `tsconfig.build.json` so the tests aren't emitted |
 | `npm start` | Run the built output |
 | `npm run migrate` | Apply `src/db/schema.sql`; safe to re-run |
 | `npm run cleanup` | Delete token rows a week past expiry |
 | `npm run format` | Prettier over `src` |
+| `npm test` | The test suite, once |
+| `npm run test:watch` | The test suite, on every save |
+| `npm run test:db:up` | Start the test database |
+| `npm run test:db:down` | Stop and delete the test database |
 
 `npm run cleanup` is meant to run on a schedule in production. It's a separate
 entry point rather than an in-process timer so the hosting platform owns the
 scheduling.
+
+## Testing
+
+Sixteen files under [`src/test`](src/test) cover every endpoint, the
+`requireAuth` middleware and the rate limiters. They're integration tests: a real Express app driven
+through Supertest, against a real Postgres. Nothing about the database is
+mocked, because most of what's worth testing here *is* the SQL — the cascade
+that empties five tables, the unique violation behind a duplicate email, the
+`FOR UPDATE` that serialises the email throttle. Only Resend and Cloudinary are
+replaced, and only because reaching them would mean sending real mail and
+storing real files.
+
+You need **Docker** installed and running, in addition to the Node version
+above. The suite talks to a throwaway container, never to your Neon database.
+
+```bash
+npm run test:db:up     # start Postgres on port 5433, wait until it answers
+npm test               # run everything once
+npm run test:db:down   # when you're done
+```
+
+Leave the container running between runs — starting it is the slow part. It
+holds nothing you need to keep.
+
+**Where the configuration lives.** `docker-compose.test.yml` defines the
+container: `postgres:17-alpine` on host port **5433**, not 5432, so a natively
+installed Postgres can't collide with it, and with no volume, so its data dies
+with it. `.env.test` is committed — it holds no real credentials, only dummy
+values that exist to satisfy the checks in `config/env.ts`, and without it in
+the repo a fresh clone couldn't run the suite at all.
+
+`vitest.config.ts` loads `.env.test` and nothing else, using Node's own
+env-file loader rather than reading `.env` as a fallback, so a variable missing
+from the test file fails loudly instead of silently picking up a real value. It
+then refuses to start unless `DATABASE_URL` names `localhost:5433` — the suite
+truncates tables before every test, and that guard is what stands between a
+mistyped variable and deleting real data.
+
+`src/test/setup.ts` applies the real `src/db/schema.sql` once per file, so the
+tables under test can't drift from the ones in production, then runs
+`TRUNCATE users RESTART IDENTITY CASCADE` before each test. Emptying `users` is
+enough to empty all six tables, because every child cascades from it. Files run
+one at a time (`fileParallelism: false`): they share the single container, and a
+file truncating tables while another was mid-run would fail at random.
+
+**Two things behave differently under test**, both keyed off `NODE_ENV=test`:
+
+- **The rate limiters are skipped.** Their counters are per-process and
+  in-memory, so a file with six signups was being throttled by the fifth. The
+  one exception is `rate-limits.test.ts`, which switches them back on around
+  the requests it measures — being throttled is the expected outcome there.
+- **bcrypt drops from 12 salt rounds to 4.** Hashing dominated the runtime and
+  nothing under test depends on the cost. Production keeps 12.
+
+**If a test fails on a column that plainly exists in `schema.sql`**, this is
+almost certainly why: every statement in that file is `CREATE TABLE IF NOT
+EXISTS`, so a newly added column never lands on a table an already-running
+container created. Recycle it —
+
+```bash
+npm run test:db:down && npm run test:db:up
+```
+
+There's no volume, so it comes back empty and picks up the current schema. This
+is the same limitation that makes real migrations the next thing this project
+needs.
 
 ## API
 
@@ -177,8 +247,11 @@ revoking a refresh token can't recall an access token already issued.
 
 Two of those are deliberate. Link creation keys on the user rather than the IP,
 which is why its limiter runs *after* `requireAuth` — that's what populates
-`req.userId`. And the redirect limiter counts only misses, so resolving real
-links is never throttled while someone enumerating codes is. The email routes
+`req.userId`. And the redirect limiter counts only misses, so a real visitor
+following links never builds a tally, while someone enumerating codes does. The
+exemption is narrower than it sounds, though: the limiter runs before the route,
+so once an address has crossed the line every request from it is refused, valid
+codes included. The email routes
 also apply a per-recipient limit inside the controller, with `FOR UPDATE`, so
 the IP limit isn't the only thing standing between one address and a mailbox
 full of verification mail.
