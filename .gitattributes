@@ -1,0 +1,14 @@
+# How git treats the contents of this repo, independent of anyone's local
+# core.autocrlf. The point of committing this is that the answer travels with
+# the code instead of living in one machine's config, where a second clone
+# configured differently would rewrite the invisible character at the end of
+# every line and call it a change.
+
+# Normalise text files to LF in the repository and check them out as LF on
+# every platform. Development happens on Windows, but CI and anything
+# containerised are Linux, and a shell script checked out with CRLF fails there
+# with "bad interpreter" -- so LF everywhere removes the translation instead of
+# performing it in both directions.
+#
+# text=auto still leaves git to detect binary files and leave them alone.
+* text=auto eol=lf
