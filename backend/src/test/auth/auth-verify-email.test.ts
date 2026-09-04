@@ -1,14 +1,14 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import app from "../app.js";
-import { pool } from "../db/index.js";
-import { sendVerificationEmail } from "../emails/send-verification-email.js";
+import app from "../../app.js";
+import { pool } from "../../db/index.js";
+import { sendVerificationEmail } from "../../emails/send-verification-email.js";
 
 // Same stand-in as the signup tests. Here it earns its keep twice over: it
 // stops the real email going out, and its recorded arguments are how a test
 // gets hold of the verification token — the only other copy is a hash.
-vi.mock("../emails/send-verification-email.js", () => ({
+vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 

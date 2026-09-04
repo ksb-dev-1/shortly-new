@@ -1,9 +1,9 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import app from "../app.js";
-import { pool } from "../db/index.js";
-import { sendVerificationEmail } from "../emails/send-verification-email.js";
+import app from "../../app.js";
+import { pool } from "../../db/index.js";
+import { sendVerificationEmail } from "../../emails/send-verification-email.js";
 
 /*
  * Replace the email module for this file.
@@ -22,7 +22,7 @@ import { sendVerificationEmail } from "../emails/send-verification-email.js";
  * hoisting is what makes it work at all: the mock has to be in place before
  * app.js pulls the real module in.
  */
-vi.mock("../emails/send-verification-email.js", () => ({
+vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 

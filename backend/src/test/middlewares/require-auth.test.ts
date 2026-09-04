@@ -2,12 +2,12 @@ import jwt from "jsonwebtoken";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import app from "../app.js";
-import { env } from "../config/env.js";
-import { pool } from "../db/index.js";
-import { createVerifiedUser, login, sessionCookies, userIdOf } from "./helpers.js";
+import app from "../../app.js";
+import { env } from "../../config/env.js";
+import { pool } from "../../db/index.js";
+import { createVerifiedUser, login, sessionCookies, userIdOf } from "../helpers.js";
 
-vi.mock("../emails/send-verification-email.js", () => ({
+vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 

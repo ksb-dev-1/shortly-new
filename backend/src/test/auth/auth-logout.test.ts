@@ -1,17 +1,17 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import app from "../app.js";
-import { pool } from "../db/index.js";
+import app from "../../app.js";
+import { pool } from "../../db/index.js";
 import {
   CREDENTIALS,
   cookie,
   createVerifiedUser,
   login,
   sessionCookies,
-} from "./helpers.js";
+} from "../helpers.js";
 
-vi.mock("../emails/send-verification-email.js", () => ({
+vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 

@@ -2,11 +2,11 @@ import type { Response } from "supertest";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import app from "../app.js";
-import { pool } from "../db/index.js";
-import { sendVerificationEmail } from "../emails/send-verification-email.js";
+import app from "../../app.js";
+import { pool } from "../../db/index.js";
+import { sendVerificationEmail } from "../../emails/send-verification-email.js";
 
-vi.mock("../emails/send-verification-email.js", () => ({
+vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
