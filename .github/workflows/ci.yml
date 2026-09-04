@@ -1,0 +1,77 @@
+name: CI
+
+# Both events, deliberately. The push build is what the README badge reports;
+# the pull_request build is what puts the checks before a merge rather than
+# after one.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch makes the first run irrelevant, so cancel it
+# rather than paying for both.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Every step runs in backend/, where package.json, vitest.config.ts and
+    # .env.test live. The paths inside them are relative to it —
+    # process.loadEnvFile(".env.test") above all.
+    defaults:
+      run:
+        working-directory: backend
+
+    # Stands in for docker-compose.test.yml. Same image, and mapped to 5433 on
+    # the runner rather than the default 5432, so the committed .env.test works
+    # here untouched — including the guard in vitest.config.ts that refuses to
+    # run unless DATABASE_URL names localhost:5433.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shortly_test
+        ports:
+          - 5433:5432
+        # The compose file expresses this as a healthcheck block; on Actions it
+        # goes here. Without it the first test can arrive in the gap between the
+        # container starting and Postgres answering.
+        options: >-
+          --health-cmd "pg_isready -U postgres -d shortly_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # ci, not install: it installs exactly what package-lock.json pins and
+      # fails if the two have drifted, which is what makes a run reproducible.
+      - run: npm ci
+
+      # Three steps rather than one command, so a red build says which of the
+      # three broke without anyone opening the log. Typecheck reads
+      # tsconfig.json, so it covers the tests as well; Build reads
+      # tsconfig.build.json, which deliberately does not.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

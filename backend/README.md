@@ -1,5 +1,7 @@
 # Shortly — API
 
+[![CI](https://github.com/ksb-dev-1/shortly-new/actions/workflows/ci.yml/badge.svg)](https://github.com/ksb-dev-1/shortly-new/actions/workflows/ci.yml)
+
 The backend for Shortly, a URL shortener: accounts with verified email, short
 links, and per-link click analytics. Express 5 and TypeScript over Postgres,
 with no ORM — every query is SQL.
@@ -88,6 +90,12 @@ npm run test:db:down   # when you're done
 
 Leave the container running between runs — starting it is the slow part. It
 holds nothing you need to keep.
+
+The same suite runs on every push and pull request, alongside a typecheck and a
+build: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). CI gets its
+database from a `postgres:17-alpine` service mapped to the same port 5433, so
+`.env.test` is used there exactly as it is here, with no CI-specific variant to
+keep in step.
 
 **Where the configuration lives.** `docker-compose.test.yml` defines the
 container: `postgres:17-alpine` on host port **5433**, not 5432, so a natively
