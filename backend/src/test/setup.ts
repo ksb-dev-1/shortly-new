@@ -1,20 +1,17 @@
-import { readFileSync } from "node:fs";
-
 import { afterAll, beforeAll, beforeEach } from "vitest";
 
+import { applyMigrations } from "../db/apply-migrations.js";
 import { pool } from "../db/index.js";
 
 /*
  * Runs once per test file, before anything in it.
  *
- * The same schema.sql the real migration uses, so the tables under test can
- * never drift from the ones in production. Every statement in it is
- * CREATE ... IF NOT EXISTS, which is what makes re-running it harmless.
+ * The same migrations the real database is brought up with, so the tables
+ * under test can never drift from the ones in production. Already-applied
+ * migrations are skipped, so this is cheap on every file after the first.
  */
 beforeAll(async () => {
-  const sql = readFileSync(new URL("../db/schema.sql", import.meta.url), "utf-8");
-
-  await pool.query(sql);
+  await applyMigrations(pool);
 });
 
 /*

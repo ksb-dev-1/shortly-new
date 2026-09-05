@@ -56,7 +56,7 @@ address that owns the Resend account, which is fine when you're the only user.
 | `npm run dev` | Watch mode on `src/server.ts` |
 | `npm run build` | `tsc` to `dist/`, via `tsconfig.build.json` so the tests aren't emitted |
 | `npm start` | Run the built output |
-| `npm run migrate` | Apply `src/db/schema.sql`; safe to re-run |
+| `npm run migrate` | Apply pending files in `src/db/migrations`; safe to re-run |
 | `npm run cleanup` | Delete token rows a week past expiry |
 | `npm run format` | Prettier over `src` |
 | `npm test` | The test suite, once |
@@ -111,8 +111,8 @@ then refuses to start unless `DATABASE_URL` names `localhost:5433` — the suite
 truncates tables before every test, and that guard is what stands between a
 mistyped variable and deleting real data.
 
-`src/test/setup.ts` applies the real `src/db/schema.sql` once per file, so the
-tables under test can't drift from the ones in production, then runs
+`src/test/setup.ts` applies the real migrations from `src/db/migrations` once
+per file, so the tables under test can't drift from the ones in production, then runs
 `TRUNCATE users RESTART IDENTITY CASCADE` before each test. Emptying `users` is
 enough to empty all six tables, because every child cascades from it. Files run
 one at a time (`fileParallelism: false`): they share the single container, and a
@@ -127,18 +127,11 @@ file truncating tables while another was mid-run would fail at random.
 - **bcrypt drops from 12 salt rounds to 4.** Hashing dominated the runtime and
   nothing under test depends on the cost. Production keeps 12.
 
-**If a test fails on a column that plainly exists in `schema.sql`**, this is
-almost certainly why: every statement in that file is `CREATE TABLE IF NOT
-EXISTS`, so a newly added column never lands on a table an already-running
-container created. Recycle it —
-
-```bash
-npm run test:db:down && npm run test:db:up
-```
-
-There's no volume, so it comes back empty and picks up the current schema. This
-is the same limitation that makes real migrations the next thing this project
-needs.
+Table creation itself is a real migration (see [Data model](#data-model)), run
+against the test database the same way as production: `beforeAll` in
+`test/setup.ts` calls the same `applyMigrations` that `npm run migrate` does,
+so a schema change only ever needs a new migration file — the already-running
+container picks it up on the next test run without being recycled.
 
 ## API
 
@@ -193,7 +186,13 @@ filesystem, which matters on hosts with an ephemeral one.
 
 ## Data model
 
-Six tables, defined in [`src/db/schema.sql`](src/db/schema.sql).
+Six tables, defined across numbered, forward-only files in
+[`src/db/migrations`](src/db/migrations) — `0001_init.sql` is all six; later
+changes each get their own file. `npm run migrate` applies whatever a
+`schema_migrations` table says hasn't run yet, in filename order, each in its
+own transaction. Nothing here is ever edited after landing on `main`; a
+correction is a new migration, the same way you wouldn't rewrite a shipped
+commit.
 
 ```
 users ─┬─ links ─── link_clicks
