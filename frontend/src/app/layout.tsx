@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "Shortly is a URL shortener with secure, email-verified accounts.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: {children: React.ReactNode}) {
   return (
     <html
       lang="en"
