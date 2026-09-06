@@ -485,9 +485,10 @@ export async function linkAnalyticsController(
      * the gap as though those days never existed. generate_series supplies
      * all 30 days and the join fills in what happened on each.
      *
-     * Days are UTC: clicked_at is a timestamptz, and without the explicit
-     * conversion the server's own timezone would silently decide where one
-     * day ends and the next begins.
+     * Days are bucketed in IST (Asia/Kolkata), the app's target market:
+     * clicked_at is a timestamptz, and without the explicit conversion the
+     * server's own timezone would silently decide where one day ends and
+     * the next begins.
      *
      * recent is narrowed by clicked_at before grouping to keep the predicate
      * index-friendly: it leaves the planner free to use the
@@ -502,27 +503,28 @@ export async function linkAnalyticsController(
      * cannot answer a range stated over an expression of that column.
      *
      * Not that expressions are unindexable in general -- an index on
-     * (clicked_at AT TIME ZONE 'UTC') would serve the wrapped form perfectly
-     * well. There simply isn't one here, and adding a second index to support
-     * a predicate the raw column already handles would be a poor trade.
+     * (clicked_at AT TIME ZONE 'Asia/Kolkata') would serve the wrapped form
+     * perfectly well. There simply isn't one here, and adding a second index
+     * to support a predicate the raw column already handles would be a poor
+     * trade.
      */
     pool.query<{ date: string; clicks: number }>(
       `WITH days AS (
          SELECT generate_series(
-                  (now() AT TIME ZONE 'UTC')::date - $2::int,
-                  (now() AT TIME ZONE 'UTC')::date,
+                  (now() AT TIME ZONE 'Asia/Kolkata')::date - $2::int,
+                  (now() AT TIME ZONE 'Asia/Kolkata')::date,
                   interval '1 day'
                 )::date AS day
        ),
        recent AS (
          SELECT
-           (clicked_at AT TIME ZONE 'UTC')::date AS day,
+           (clicked_at AT TIME ZONE 'Asia/Kolkata')::date AS day,
            count(*)::int AS clicks
          FROM link_clicks
          WHERE link_id = $1
            AND clicked_at >= (
-                 ((now() AT TIME ZONE 'UTC')::date - $2::int)::timestamp
-                 AT TIME ZONE 'UTC'
+                 ((now() AT TIME ZONE 'Asia/Kolkata')::date - $2::int)::timestamp
+                 AT TIME ZONE 'Asia/Kolkata'
                )
          GROUP BY 1
        )
