@@ -27,6 +27,10 @@ export const env = {
   CLOUDINARY_API_KEY: requireEnv("CLOUDINARY_API_KEY"),
   CLOUDINARY_API_SECRET: requireEnv("CLOUDINARY_API_SECRET"),
 
+  STRIPE_SECRET_KEY: requireEnv("STRIPE_SECRET_KEY"),
+  STRIPE_PRICE_ID_MONTHLY: requireEnv("STRIPE_PRICE_ID_MONTHLY"),
+  STRIPE_PRICE_ID_YEARLY: requireEnv("STRIPE_PRICE_ID_YEARLY"),
+
   // Number of reverse proxies in front of the app; 0 means direct connections.
   // Rate limiting keys on req.ip, which is only correct when this is accurate.
   TRUST_PROXY: Number(process.env.TRUST_PROXY) || 0,
