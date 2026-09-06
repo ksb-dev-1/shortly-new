@@ -558,7 +558,7 @@ export async function redirectController(
         ],
       )
       .catch((error: unknown) => {
-        console.error("Failed to record link click:", error);
+        req.log.error(error, "Failed to record link click");
       });
   }
 

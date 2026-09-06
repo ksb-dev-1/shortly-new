@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import type { Pool } from "pg";
 
+import { logger } from "../config/logger.js";
+
 const migrationsDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "migrations",
@@ -48,7 +50,7 @@ export async function applyMigrations(pool: Pool) {
           file,
         ]);
         await client.query("COMMIT");
-        console.log(`Applied migration ${file}`);
+        logger.info(`Applied migration ${file}`);
       } catch (err) {
         await client.query("ROLLBACK");
         throw err;

@@ -1,3 +1,4 @@
+import { logger } from "../config/logger.js";
 import { pool } from "./index.js";
 
 /**
@@ -46,14 +47,14 @@ async function cleanupTokens() {
     const deleted = result.rowCount ?? 0;
     total += deleted;
 
-    console.log(`${table}: deleted ${deleted}`);
+    logger.info(`${table}: deleted ${deleted}`);
   }
 
-  console.log(`Cleanup complete, ${total} rows removed`);
+  logger.info(`Cleanup complete, ${total} rows removed`);
   await pool.end();
 }
 
 cleanupTokens().catch(function (err) {
-  console.error("Token cleanup failed", err);
+  logger.error(err, "Token cleanup failed");
   process.exit(1);
 });

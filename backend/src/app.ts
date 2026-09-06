@@ -1,8 +1,10 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import { pinoHttp } from "pino-http";
 
 import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
 import {
   errorHandler,
   notFoundHandler,
@@ -16,6 +18,17 @@ const app = express();
 
 // Tells Express how many proxy hops to unwrap when resolving req.ip
 app.set("trust proxy", env.TRUST_PROXY);
+
+// One request id per request, attached as req.log; also logs a line per
+// finished request (method, path, status, duration) on its own. Cookies carry
+// the access/refresh tokens, so both directions are redacted rather than
+// logged.
+app.use(
+  pinoHttp({
+    logger,
+    redact: ["req.headers.cookie", 'res.headers["set-cookie"]'],
+  }),
+);
 
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(express.json());

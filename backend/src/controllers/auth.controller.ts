@@ -143,7 +143,7 @@ export async function signupController(req: Request, res: Response) {
     try {
       await sendVerificationEmail(name, email, verificationToken);
     } catch (error) {
-      console.error("Failed to send verification email:", error);
+      req.log.error(error, "Failed to send verification email");
     }
 
     // 10. Return success
@@ -617,7 +617,7 @@ export async function resendVerificationController(
     try {
       await sendVerificationEmail(user.name, user.email, verificationToken);
     } catch (error) {
-      console.error("Failed to send verification email:", error);
+      req.log.error(error, "Failed to send verification email");
     }
 
     // 12. Return generic response
@@ -734,7 +734,7 @@ export async function forgotPasswordController(req: Request, res: Response) {
     try {
       await sendPasswordResetEmail(user.name, user.email, resetToken);
     } catch (error) {
-      console.error("Failed to send password reset email:", error);
+      req.log.error(error, "Failed to send password reset email");
     }
 
     // 13. Return generic response

@@ -35,7 +35,7 @@ export function notFoundHandler(req: Request, res: Response) {
  */
 export function errorHandler(
   error: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) {
@@ -82,7 +82,7 @@ export function errorHandler(
 
   // Anything unrecognised: log the real cause, tell the client nothing.
   // Leaking a stack trace or a SQL error to the client is how internals escape.
-  console.error(error);
+  req.log.error(error);
 
   return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,

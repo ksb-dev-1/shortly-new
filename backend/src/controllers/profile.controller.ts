@@ -246,7 +246,7 @@ export async function deleteUserAccountController(req: Request, res: Response) {
         invalidate: true,
       });
     } catch (error) {
-      console.error("Failed to delete avatar from Cloudinary:", error);
+      req.log.error(error, "Failed to delete avatar from Cloudinary");
     }
 
     /*
@@ -265,7 +265,7 @@ export async function deleteUserAccountController(req: Request, res: Response) {
     try {
       await cloudinary.api.delete_folder(`shortly/avatars/${userId}`);
     } catch (error) {
-      console.error("Failed to delete avatar folder from Cloudinary:", error);
+      req.log.error(error, "Failed to delete avatar folder from Cloudinary");
     }
   }
 
