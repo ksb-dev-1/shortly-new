@@ -186,7 +186,27 @@
   }
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
   }
+}
+
+/*
+ * Radix's scroll-lock (react-remove-scroll-bar, used by every dropdown,
+ * dialog and select) measures `window.innerWidth - documentElement.clientWidth`
+ * to add compensating margin when it hides the scrollbar, so opening one
+ * doesn't itself shift the page. With `scrollbar-gutter: stable` above, that
+ * measurement is never 0 -- the gutter is reserved on every page, scrollable
+ * or not -- so Radix adds a real extra margin every time, on top of the
+ * already-reserved gutter. That's the shift: it appears when the overlay
+ * opens/closes, most visibly on a short page mid-navigation.
+ *
+ * The gutter already does the job this margin exists for, so cancel it.
+ * `html body[...]` outranks Radix's own `body[...]` rule on specificity, so
+ * this wins regardless of which stylesheet loads later.
+ */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* faint engineering-paper grid, used behind the hero */
