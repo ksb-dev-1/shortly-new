@@ -10,6 +10,7 @@ import {
   notFoundHandler,
 } from "./middlewares/errorHandler.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
+import billingRoutes from "./routes/billing.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import linkRoutes from "./routes/links.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
@@ -38,6 +39,7 @@ app.use(cookieParser());
 app.use("/health", healthRoutes);
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/billing", billingRoutes);
 app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/links", linkRoutes);
 
