@@ -5,6 +5,7 @@ export interface PublicUser {
   email: string;
   is_verified: boolean;
   avatar_url: string | null;
+  plan: "free" | "pro";
   created_at: Date;
 }
 
@@ -16,6 +17,7 @@ export interface UserWithPassword {
   password_hash: string;
   is_verified: boolean;
   avatar_url: string | null;
+  plan: "free" | "pro";
 }
 
 /** A links row as it is safe to send to the client. */

@@ -98,6 +98,7 @@ export async function userProfileController(req: Request, res: Response) {
        email,
        is_verified,
        avatar_url,
+       plan,
        created_at
      FROM users
      WHERE id = $1`,
@@ -159,6 +160,7 @@ export async function updateUserProfileController(req: Request, res: Response) {
        email,
        is_verified,
        avatar_url,
+       plan,
        created_at`,
     [name ?? null, avatarUrl, userId],
   );

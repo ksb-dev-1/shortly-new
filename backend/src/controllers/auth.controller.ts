@@ -283,7 +283,7 @@ export async function loginController(req: Request, res: Response) {
 
   // 2. Find the user by email
   const result = await pool.query<UserWithPassword>(
-    `SELECT id, name, email, password_hash, is_verified, avatar_url
+    `SELECT id, name, email, password_hash, is_verified, avatar_url, plan
      FROM users
      WHERE email = $1`,
     [email],

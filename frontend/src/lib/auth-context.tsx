@@ -17,6 +17,7 @@ export type User = {
   email: string;
   is_verified: boolean;
   avatar_url: string | null;
+  plan: "free" | "pro";
 };
 
 type AuthContextValue = {
