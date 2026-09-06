@@ -15,6 +15,7 @@ import healthRoutes from "./routes/health.routes.js";
 import linkRoutes from "./routes/links.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import redirectRoutes from "./routes/redirect.routes.js";
+import stripeWebhookRoutes from "./routes/stripe-webhook.routes.js";
 
 const app = express();
 
@@ -31,6 +32,10 @@ app.use(
     redact: ["req.headers.cookie", 'res.headers["set-cookie"]'],
   }),
 );
+
+// Mounted before express.json(): verifying Stripe's signature needs the raw
+// body, which express.json() would already have consumed and parsed away.
+app.use("/api/v1/billing/webhook", stripeWebhookRoutes);
 
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(express.json());

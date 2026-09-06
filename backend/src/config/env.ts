@@ -30,6 +30,7 @@ export const env = {
   STRIPE_SECRET_KEY: requireEnv("STRIPE_SECRET_KEY"),
   STRIPE_PRICE_ID_MONTHLY: requireEnv("STRIPE_PRICE_ID_MONTHLY"),
   STRIPE_PRICE_ID_YEARLY: requireEnv("STRIPE_PRICE_ID_YEARLY"),
+  STRIPE_WEBHOOK_SECRET: requireEnv("STRIPE_WEBHOOK_SECRET"),
 
   // Number of reverse proxies in front of the app; 0 means direct connections.
   // Rate limiting keys on req.ip, which is only correct when this is accurate.
