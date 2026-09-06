@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import app from "../../app.js";
 import { pool } from "../../db/index.js";
-import { CREDENTIALS, signedInSession } from "../helpers.js";
+import { CREDENTIALS, makeUserPro, signedInSession } from "../helpers.js";
 
 vi.mock("../../emails/send-verification-email.js", () => ({
   sendVerificationEmail: vi.fn(),
@@ -125,6 +125,71 @@ describe("POST /api/v1/links", () => {
   });
 });
 
+describe("POST /api/v1/links — free plan cap", () => {
+  it("allows exactly five links on the free plan", async () => {
+    const cookies = await signedInSession();
+
+    for (let index = 0; index < 5; index += 1) {
+      const response = await createLink(cookies, {
+        originalUrl: `https://example.com/free-${index}`,
+      });
+
+      expect(response.status).toBe(201);
+    }
+  });
+
+  it("refuses a sixth link on the free plan", async () => {
+    const cookies = await signedInSession();
+
+    for (let index = 0; index < 5; index += 1) {
+      await createLink(cookies, {
+        originalUrl: `https://example.com/free-${index}`,
+      });
+    }
+
+    const sixth = await createLink(cookies, {
+      originalUrl: "https://example.com/free-5",
+    });
+
+    expect(sixth.status).toBe(402);
+    expect(sixth.body.message).toMatch(/Upgrade to Pro/);
+  });
+
+  it("lets only one of two concurrent requests take the last slot", async () => {
+    const cookies = await signedInSession();
+
+    for (let index = 0; index < 4; index += 1) {
+      await createLink(cookies, {
+        originalUrl: `https://example.com/race-${index}`,
+      });
+    }
+
+    // Both requests read "4 links" before either can write a 5th if the
+    // count-then-insert weren't protected by FOR UPDATE on the user row --
+    // this is what the lock is actually for.
+    const [first, second] = await Promise.all([
+      createLink(cookies, { originalUrl: "https://example.com/race-a" }),
+      createLink(cookies, { originalUrl: "https://example.com/race-b" }),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([201, 402]);
+  });
+
+  it("does not cap a Pro account", async () => {
+    const cookies = await signedInSession();
+    await makeUserPro();
+
+    for (let index = 0; index < 6; index += 1) {
+      const response = await createLink(cookies, {
+        originalUrl: `https://example.com/pro-${index}`,
+      });
+
+      expect(response.status).toBe(201);
+    }
+  });
+});
+
 describe("GET /api/v1/links", () => {
   async function createMany(cookies: string, count: number) {
     for (let index = 0; index < count; index += 1) {
@@ -151,6 +216,7 @@ describe("GET /api/v1/links", () => {
 
   it("paginates, and reports a total that survives an empty page", async () => {
     const cookies = await signedInSession();
+    await makeUserPro();
     await createMany(cookies, 7);
 
     const page = await request(app)

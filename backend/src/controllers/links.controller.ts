@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import crypto from "node:crypto";
 
+import { FREE_LINK_LIMIT } from "../config/plans.js";
 import { pool } from "../db/index.js";
 import { ApiError } from "../middlewares/errorHandler.middleware.js";
 import {
@@ -96,68 +97,129 @@ export async function createLinkController(
   // Generated codes can be retried if a collision occurs.
   const maxAttempts = customCode ? 1 : MAX_CODE_ATTEMPTS;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const code = customCode ?? generateCode();
+  const client = await pool.connect();
 
-    try {
-      /*
-       * Do not SELECT first to check whether the code exists.
-       *
-       * SELECT -> INSERT has a race condition because another request
-       * could claim the code between those two operations.
-       *
-       * PostgreSQL's UNIQUE constraint is the final authority.
-       */
-      const result = await pool.query<PublicLink>(
-        `INSERT INTO links (user_id, code, original_url)
-         VALUES ($1, $2, $3)
-         RETURNING
-           id,
-           code,
-           original_url,
-           created_at,
-           updated_at`,
-        [userId, code, originalUrl],
+  let inTransaction = false;
+
+  try {
+    // 1. Start transaction
+    await client.query("BEGIN");
+    inTransaction = true;
+
+    // 2. Lock the user's row for the rest of this transaction, so a second
+    // request racing this one on the free-plan check below has to wait
+    // rather than both reading "4 links" and both being let through.
+    const userResult = await client.query<{ plan: string }>(
+      `SELECT plan FROM users WHERE id = $1 FOR UPDATE`,
+      [userId],
+    );
+
+    const user = userResult.rows[0];
+
+    if (!user) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized");
+    }
+
+    // 3. Enforce the free-plan cap. Pro is unlimited, so paying users skip
+    // this count entirely.
+    if (user.plan === "free") {
+      const countResult = await client.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM links WHERE user_id = $1`,
+        [userId],
       );
 
-      const link = result.rows[0];
-
-      if (!link) {
-        throw new Error("Failed to create link");
+      if ((countResult.rows[0]?.total ?? 0) >= FREE_LINK_LIMIT) {
+        throw new ApiError(
+          StatusCodes.PAYMENT_REQUIRED,
+          `Free plan is limited to ${FREE_LINK_LIMIT} links. Upgrade to Pro for unlimited links.`,
+        );
       }
+    }
 
-      return res.status(StatusCodes.CREATED).json({
-        success: true,
-        message: "Link created",
-        link,
-      });
-    } catch (error) {
-      // Code already exists.
-      if (isUniqueViolation(error)) {
-        // User explicitly requested this alias.
-        if (customCode) {
-          throw new ApiError(
-            StatusCodes.CONFLICT,
-            "That alias is already taken",
-          );
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const code = customCode ?? generateCode();
+
+      // A savepoint per attempt: a collision aborts only the INSERT that
+      // caused it, not the user-row lock or the cap check above it, so the
+      // next generated code can still be tried inside the same transaction.
+      await client.query("SAVEPOINT before_insert");
+
+      try {
+        /*
+         * Do not SELECT first to check whether the code exists.
+         *
+         * SELECT -> INSERT has a race condition because another request
+         * could claim the code between those two operations.
+         *
+         * PostgreSQL's UNIQUE constraint is the final authority.
+         */
+        const result = await client.query<PublicLink>(
+          `INSERT INTO links (user_id, code, original_url)
+           VALUES ($1, $2, $3)
+           RETURNING
+             id,
+             code,
+             original_url,
+             created_at,
+             updated_at`,
+          [userId, code, originalUrl],
+        );
+
+        const link = result.rows[0];
+
+        if (!link) {
+          throw new Error("Failed to create link");
         }
 
-        // System-generated code collided.
-        // Generate another code and retry.
-        continue;
+        await client.query("COMMIT");
+        inTransaction = false;
+
+        return res.status(StatusCodes.CREATED).json({
+          success: true,
+          message: "Link created",
+          link,
+        });
+      } catch (error) {
+        // Code already exists.
+        if (isUniqueViolation(error)) {
+          await client.query("ROLLBACK TO SAVEPOINT before_insert");
+
+          // User explicitly requested this alias.
+          if (customCode) {
+            throw new ApiError(
+              StatusCodes.CONFLICT,
+              "That alias is already taken",
+            );
+          }
+
+          // System-generated code collided.
+          // Generate another code and retry.
+          continue;
+        }
+
+        // Any unexpected database error should go to the
+        // application's global error handler.
+        throw error;
       }
-
-      // Any unexpected database error should go to the
-      // application's global error handler.
-      throw error;
     }
-  }
 
-  // All generated-code attempts collided.
-  throw new ApiError(
-    StatusCodes.INTERNAL_SERVER_ERROR,
-    "Could not generate a unique code, please try again",
-  );
+    // All generated-code attempts collided.
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Could not generate a unique code, please try again",
+    );
+  } catch (error) {
+    // Only rollback if a transaction is actually open
+    if (inTransaction) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // ─────────────────────────────────────────────

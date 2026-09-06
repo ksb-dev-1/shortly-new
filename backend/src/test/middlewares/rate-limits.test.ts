@@ -16,6 +16,7 @@ import {
   CREDENTIALS,
   createVerifiedUser,
   eventually,
+  makeUserPro,
   signedInSession,
 } from "../helpers.js";
 
@@ -222,6 +223,10 @@ describe("link creation limiter — sixty an hour, per user", () => {
   it("throttles the sixty-first link, and only for that account", async () => {
     const mine = await signedInSession();
     const theirs = await signedInSession({ email: "other@example.com" });
+
+    // Sixty links is well past the free-plan cap, and the limiter -- not the
+    // cap -- is what this test is about.
+    await makeUserPro();
 
     await withLimiters(async () => {
       for (let i = 1; i <= 60; i += 1) {

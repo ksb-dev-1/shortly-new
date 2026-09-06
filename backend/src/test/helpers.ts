@@ -122,6 +122,11 @@ export async function signedInSession(
   return sessionCookies(response);
 }
 
+/** Lifts the free-plan link cap for tests that need more than FREE_LINK_LIMIT links. */
+export async function makeUserPro(email = CREDENTIALS.email) {
+  await pool.query("UPDATE users SET plan = 'pro' WHERE email = $1", [email]);
+}
+
 export async function userIdOf(email = CREDENTIALS.email) {
   const { rows } = await pool.query<{ id: string }>(
     "SELECT id FROM users WHERE email = $1",
