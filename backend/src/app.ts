@@ -10,6 +10,7 @@ import {
   notFoundHandler,
 } from "./middlewares/errorHandler.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
+import healthRoutes from "./routes/health.routes.js";
 import linkRoutes from "./routes/links.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import redirectRoutes from "./routes/redirect.routes.js";
@@ -33,6 +34,8 @@ app.use(
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use("/health", healthRoutes);
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/profile", profileRoutes);
