@@ -36,3 +36,6 @@ export const linksQueryKey = (page: number) =>
  */
 export const linkAnalyticsQueryKey = (linkId: string) =>
   ["link-analytics", linkId] as const;
+
+// mirrors backend/src/config/plans.ts FREE_LINK_LIMIT
+export const FREE_LINK_LIMIT = 5;

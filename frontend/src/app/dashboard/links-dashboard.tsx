@@ -11,10 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
+import { CheckoutStatusToast } from "./checkout-status-toast";
 import { CreateLinkForm } from "./create-link-form";
 import { LinksList } from "./links-list";
-import { LINKS_PER_PAGE, linksQueryKey } from "./queries";
+import { FREE_LINK_LIMIT, LINKS_PER_PAGE, linksQueryKey } from "./queries";
 import type { Pagination, ShortLink } from "./types";
+import { UpgradeCard } from "./upgrade-card";
 
 type LinksPage = { links: ShortLink[]; pagination: Pagination };
 
@@ -122,8 +124,13 @@ export function LinksDashboard() {
     );
   }
 
+  const isAtLinkCap =
+    user.plan === "free" && (data?.pagination.total ?? 0) >= FREE_LINK_LIMIT;
+
   return (
     <div className="flex flex-col gap-8">
+      <CheckoutStatusToast />
+
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">
           Your links<span className="text-brand">.</span>
@@ -133,7 +140,11 @@ export function LinksDashboard() {
         </p>
       </div>
 
-      <CreateLinkForm onCreated={() => setPage(1)} />
+      {isAtLinkCap ? (
+        <UpgradeCard />
+      ) : (
+        <CreateLinkForm onCreated={() => setPage(1)} />
+      )}
 
       <LinksList
         links={data?.links ?? []}

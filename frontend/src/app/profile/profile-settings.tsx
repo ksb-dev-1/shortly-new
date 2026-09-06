@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessage } from "@/lib/api";
 import { type User, useAuth } from "@/lib/auth-context";
 
+import { BillingCard } from "./billing-card";
 import { ChangePasswordForm } from "./change-password-form";
 import { DeleteAccountCard } from "./delete-account-card";
 
@@ -232,6 +233,7 @@ export function ProfileSettings() {
   return (
     <div className="flex flex-col gap-8">
       <ProfileCard user={user} />
+      <BillingCard user={user} />
       <ChangePasswordForm />
       <DeleteAccountCard />
     </div>
