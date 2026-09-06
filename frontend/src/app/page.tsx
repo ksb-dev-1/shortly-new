@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Faq } from "@/components/home/faq";
 import { Features } from "@/components/home/features";
 import { Footer } from "@/components/home/footer";
 import { Hero } from "@/components/home/hero";
@@ -16,6 +17,7 @@ export default function Home() {
       <Hero />
       <HowItWorks />
       <Features />
+      <Faq />
       <Footer />
     </div>
   );
