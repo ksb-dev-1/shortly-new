@@ -1,6 +1,9 @@
 import { Router } from "express";
 
-import { createCheckoutSessionController } from "../controllers/billing.controller.js";
+import {
+  createCheckoutSessionController,
+  createPortalSessionController,
+} from "../controllers/billing.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { checkoutSchema } from "../schemas/billing.schema.js";
@@ -13,5 +16,7 @@ router.post(
   validate(checkoutSchema),
   createCheckoutSessionController,
 );
+
+router.post("/portal", requireAuth, createPortalSessionController);
 
 export default router;

@@ -22,20 +22,29 @@ vi.mock("../../config/stripe.js", () => ({
   stripe: {
     customers: { create: vi.fn() },
     checkout: { sessions: { create: vi.fn() } },
+    billingPortal: { sessions: { create: vi.fn() } },
   },
 }));
 
 const { stripe } = await import("../../config/stripe.js");
 const customersCreate = vi.mocked(stripe.customers.create);
 const sessionsCreate = vi.mocked(stripe.checkout.sessions.create);
+const portalSessionsCreate = vi.mocked(stripe.billingPortal.sessions.create);
 
 const FAKE_CUSTOMER_ID = "cus_fake123";
 const FAKE_CHECKOUT_URL = "https://checkout.stripe.com/fake-session";
+const FAKE_PORTAL_URL = "https://billing.stripe.com/fake-portal";
 
 function checkout(cookies: string | undefined, plan: unknown) {
   const req = request(app).post("/api/v1/billing/checkout");
 
   return (cookies ? req.set("Cookie", cookies) : req).send({ plan });
+}
+
+function portal(cookies: string | undefined) {
+  const req = request(app).post("/api/v1/billing/portal");
+
+  return cookies ? req.set("Cookie", cookies) : req;
 }
 
 beforeEach(() => {
@@ -48,6 +57,10 @@ beforeEach(() => {
   sessionsCreate.mockResolvedValue({
     url: FAKE_CHECKOUT_URL,
   } as unknown as Stripe.Response<Stripe.Checkout.Session>);
+
+  portalSessionsCreate.mockResolvedValue({
+    url: FAKE_PORTAL_URL,
+  } as unknown as Stripe.Response<Stripe.BillingPortal.Session>);
 });
 
 describe("POST /api/v1/billing/checkout", () => {
@@ -123,6 +136,41 @@ describe("POST /api/v1/billing/checkout", () => {
       expect.objectContaining({
         line_items: [{ price: env.STRIPE_PRICE_ID_MONTHLY, quantity: 1 }],
       }),
+    );
+  });
+});
+
+describe("POST /api/v1/billing/portal", () => {
+  it("rejects a request with no session", async () => {
+    const response = await portal(undefined);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("refuses a user who has never subscribed", async () => {
+    const cookies = await signedInSession();
+
+    const response = await portal(cookies);
+
+    expect(response.status).toBe(400);
+    expect(portalSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns a portal URL for an existing Stripe customer", async () => {
+    const cookies = await signedInSession();
+    const userId = await userIdOf();
+
+    await pool.query("UPDATE users SET stripe_customer_id = $1 WHERE id = $2", [
+      "cus_portal_test",
+      userId,
+    ]);
+
+    const response = await portal(cookies);
+
+    expect(response.status).toBe(200);
+    expect(response.body.url).toBe(FAKE_PORTAL_URL);
+    expect(portalSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: "cus_portal_test" }),
     );
   });
 });

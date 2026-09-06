@@ -90,6 +90,51 @@ export async function createCheckoutSessionController(
 }
 
 // ─────────────────────────────────────────────
+// Create a Customer Portal session
+// ─────────────────────────────────────────────
+
+/**
+ * Returns a URL to Stripe's hosted billing portal, where a subscriber can
+ * cancel, switch plan, update their card, or see past invoices without any
+ * of that UI being built here.
+ */
+export async function createPortalSessionController(
+  req: Request,
+  res: Response,
+) {
+  // requireAuth should have populated this.
+  const userId = req.userId;
+
+  if (!userId) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized");
+  }
+
+  const result = await pool.query<{ stripe_customer_id: string | null }>(
+    `SELECT stripe_customer_id FROM users WHERE id = $1`,
+    [userId],
+  );
+
+  const customerId = result.rows[0]?.stripe_customer_id;
+
+  if (!customerId) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "No billing account yet -- subscribe first",
+    );
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: `${env.FRONTEND_URL}/dashboard`,
+  });
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    url: session.url,
+  });
+}
+
+// ─────────────────────────────────────────────
 // Handle a Stripe webhook event
 // ─────────────────────────────────────────────
 
