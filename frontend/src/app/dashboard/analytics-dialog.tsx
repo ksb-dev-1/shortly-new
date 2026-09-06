@@ -64,6 +64,12 @@ export function AnalyticsDialog({
     // Nothing is fetched until the dialog is actually opened — a dashboard
     // page holds five of these mounted at once.
     enabled: open,
+
+    // Overrides the global 30s staleTime. Clicks come from other people's
+    // browsers, so there's no mutation response to invalidate this on —
+    // opening the dialog is the only signal we get that someone wants a
+    // current answer, so treat the cache as stale every time that happens.
+    staleTime: 0,
   });
 
   // All-time and the window differ on purpose: the API returns a lifetime
